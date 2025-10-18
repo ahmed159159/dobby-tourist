@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>دوبّي — المساعد السياحي الذكي</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f172a; --card:#0f172a; --muted:#94a3b8; --accent:#6366f1; --accent-2:#8b5cf6; --surface:#111827; --glass: rgba(255,255,255,0.03);
+  --success:#10b981; --warning:#f59e0b; --error:#ef4444; --text:#edf2f7;
+}
+*{box-sizing:border-box}
+html,body{height:100%; margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background: linear-gradient(180deg,#071026 0%, #0f172a 100%); color:var(--text);}
+.app{max-width:1200px; margin:20px auto; padding:18px; display:grid; grid-template-columns:1fr 340px; gap:18px;}
+.header{grid-column: span 2; background:linear-gradient(135deg, rgba(139,92,246,0.06), rgba(99,102,241,0.04)); border:1px solid rgba(255,255,255,0.03); padding:18px; border-radius:14px; display:flex; gap:16px; align-items:center;}
+.logo{width:72px; height:72px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:28px; box-shadow:0 6px 18px rgba(99,102,241,0.12);}
+.title{font-size:20px; font-weight:700}
+.subtitle{color:var(--muted); font-size:13px}
+.chat{background:var(--surface); border-radius:14px; padding:0; display:flex; flex-direction:column; height:76vh; border:1px solid rgba(255,255,255,0.03); overflow:hidden;}
+.chat-header{display:flex; gap:12px; align-items:center; padding:14px; background:linear-gradient(90deg, rgba(99,102,241,0.06), rgba(139,92,246,0.03)); border-bottom:1px solid rgba(255,255,255,0.02);}
+.avatar{width:48px;height:48px;border-radius:10px;background:white;display:flex;align-items:center;justify-content:center}
+.chat-body{padding:18px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:12px;}
+.message{display:flex; gap:12px; align-items:flex-start; opacity:0; animation:slideIn .25s ease forwards;}
+.message.user{flex-direction:row-reverse;}
+.message-avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0ea5a5,#06b6d4); color:white; font-size:18px;}
+.message-content{max-width:78%; padding:12px 14px; border-radius:12px; background:linear-gradient(135deg,#0b1220,#0c172a); border:1px solid rgba(255,255,255,0.02); color:var(--text); line-height:1.45; font-size:14px;}
+.message.user .message-content{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:white; border-bottom-right-radius:6px;}
+@keyframes slideIn{from{opacity:0; transform: translateY(10px)} to{opacity:1; transform:none}}
+.typing-indicator{display:flex; gap:8px; align-items:center; color:var(--muted); font-style:italic}
+.typing-dot{width:8px;height:8px;border-radius:50%;background:var(--muted); animation:dot 1.2s infinite; }
+.typing-dot:nth-child(2){animation-delay:0.15s} .typing-dot:nth-child(3){animation-delay:0.30s}
+@keyframes dot{0%{transform:scale(.8);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.8);opacity:.6}}
+.chat-footer{padding:14px;border-top:1px solid rgba(255,255,255,0.02); background:linear-gradient(180deg, transparent, rgba(255,255,255,0.01));}
+.input-row{display:flex; gap:10px; align-items:center}
+.textarea{flex:1; min-height:44px; max-height:120px; resize:none; padding:12px 14px; border-radius:12px; background:var(--glass); color:var(--text); border:1px solid rgba(255,255,255,0.02); outline:none}
+.btn{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; display:inline-flex; gap:8px; align-items:center}
+.sidebar{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03); height:76vh; overflow:auto}
+.card{background:transparent; border:1px solid rgba(255,255,255,0.02); border-radius:10px; padding:12px; margin-bottom:12px}
+.place-card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); border:1px solid rgba(255,255,255,0.03); border-radius:12px; padding:10px; margin:8px 0}
+.small{font-size:13px;color:var(--muted)}
+.legend{display:flex; gap:8px; align-items:center; margin-bottom:8px}
+@media(max-width:980px){.app{grid-template-columns:1fr; padding:12px} .sidebar{height:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">D</div>
+    <div>
+      <div class="title">Dobby — المساعد السياحي</div>
+      <div class="subtitle">اسألني عن مطاعم، فنادق، كافيهات أو أماكن سياحية — هجيبلك الأقرب.</div>
+    </div>
+  </div>
+
+  <section class="chat">
+    <div class="chat-header">
+      <div class="avatar"><img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d1.png" alt="" style="width:36px"></div>
+      <div>
+        <div style="font-weight:700">Dobby Assistant</div>
+        <div class="small">مبني على Fireworks + Foursquare</div>
+      </div>
+    </div>
+
+    <div class="chat-body" id="chatMessages">
+      <!-- initial welcome -->
+      <div class="message assistant" style="opacity:1">
+        <div class="message-avatar"><img src="dobby-logo.png" alt="D" style="width:40px;height:40px;border-radius:8px"></div>
+        <div class="message-content">
+          <strong>أهلًا! أنا دوبّي — المساعد السياحي.</strong><br>
+          ممكن تسأل: "فين أقرب مطعم تايلاندي؟" أو "دورلي فندق قريب من المطار".<br>
+          سماح الوصول للموقع مطلوب لعرض الأماكن القريبة.
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-footer">
+      <div class="input-row">
+        <textarea id="messageInput" class="textarea" placeholder="اكتب سؤالك (مثلاً: أقرب مطعم بيتزا)" rows="1"></textarea>
+        <button id="sendBtn" class="btn"><i class="fas fa-paper-plane"></i> ارسال</button>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn" onclick="quick('أقرب مطعم')">أقرب مطعم</button>
+        <button class="btn" onclick="quick('كافيه مع واي فاي')">كافيه</button>
+        <button class="btn" onclick="quick('فندق 4 نجوم')">فندق</button>
+        <button class="btn" onclick="quick('معالم سياحية قريبة')">معالم</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="card">
+      <div style="font-weight:700">معلومات الجلسة</div>
+      <div class="small" id="locInfo">الموقع: غير محدد</div>
+      <div class="small" id="lastQuery">آخر استعلام: -</div>
+      <div style="margin-top:8px" class="small">المفاتيح مضمنة بالصفحة (ظاهريًا)</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700">النتائج الحالية</div>
+      <div id="placesList" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700">نقاط مهمة</div>
+      <ul class="small">
+        <li>يجب الموافقة على مشاركة الموقع في المتصفح.</li>
+        <li>المفاتيح مدموجة في الصفحة — تجنب مشاركتها علنًا إذا احتجت للأمان.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+/*
+  ملف HTML واحد: Dobby Tourist Assistant
+  - يستخدم Dobby (Fireworks) لتحليل النية وتحويل السؤال لاستعلام
+  - يستخدم Foursquare V3 Places للبحث عن أماكن قريبة
+  - يعتمد على geolocation للحصول على lat/lon
+  - المفاتيح التي زودتني بها مدموجة مباشرة (كما طلبت)
+*/
+
+/* ==================== اكتب مفاتيحك هنا ==================== */
+const DOBBY_API_KEY = "fw_3ZSTYUGtSAeW8fFekpjE4HCm";
+const FOURSQUARE_API_KEY = "0FSIA30DRFMO12XCO2APMTHPIXBIECHL4UJFGDDD3VILXBA4";
+/* ========================================================== */
+
+const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/completions";
+const FIREWORKS_MODEL = "sentientfoundation/dobby-unhinged-llama-3-3-70b-new"; // النموذج الذي ذكرته
+
+// state
+const state = {
+  userLocation: null,
+  isLoading: false
+};
+
+// عناصر DOM
+const elements = {
+  chatMessages: document.getElementById('chatMessages'),
+  input: document.getElementById('messageInput'),
+  sendBtn: document.getElementById('sendBtn'),
+  placesList: document.getElementById('placesList'),
+  locInfo: document.getElementById('locInfo'),
+  lastQuery: document.getElementById('lastQuery')
+};
+
+// مساعد: إضافة رسالة إلى الشات
+function addMessage(content, sender = 'assistant', isHtml = false) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message ' + (sender === 'user' ? 'user' : 'assistant');
+
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  if (sender === 'user') { avatar.textContent = '👤'; }
+  else {
+    const img = document.createElement('img');
+    img.src = 'dobby-logo.png';
+    img.style.width = '40px'; img.style.height = '40px'; img.style.borderRadius = '8px';
+    avatar.appendChild(img);
+  }
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'message-content';
+  if (isHtml) contentDiv.innerHTML = content;
+  else contentDiv.innerText = content;
+
+  wrapper.appendChild(avatar);
+  wrapper.appendChild(contentDiv);
+  elements.chatMessages.appendChild(wrapper);
+  elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+
+// typing indicator
+function showTyping(text = "Dobby يفكر...") {
+  hideTyping();
+  const div = document.createElement('div');
+  div.id = 'typingIndicator';
+  div.className = 'message assistant';
+  div.innerHTML = `
+    <div class="message-avatar"><img src="dobby-logo.png" style="width:40px;height:40px;border-radius:8px"></div>
+    <div class="message-content"><div class="typing-indicator"><span>${text}</span><div style="display:flex;gap:6px;margin-left:10px"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>
+  `;
+  elements.chatMessages.appendChild(div);
+  elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+function hideTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+// اختصارات واجهة
+function quick(text){
+  elements.input.value = text;
+  elements.input.focus();
+}
+
+// الحصول على موقع المستخدم عبر المتصفح
+function requestUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) return reject(new Error('المتصفح لا يدعم الموقع'));
+    navigator.geolocation.getCurrentPosition(position => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      state.userLocation = { lat, lon };
+      elements.locInfo.textContent = `الموقع: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      resolve(state.userLocation);
+    }, err => {
+      reject(err);
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
+/* ==== اتصل بـ Dobby (Fireworks) لتحويل الرسالة إلى استعلام بحث أو نية واضحة ==== */
+async function askDobbyForIntent(userMessage) {
+  // نطلب من دوبّي يخرج JSON جاهز مع intent و query
+  const systemPrompt = `
+You are Dobby, a concise professional travel assistant. Analyze the user's message (Arabic or English).
+Return ONLY a JSON object (no extra text) with fields:
+{
+  "intent": "place_search" | "info" | "other",
+  "category": "restaurant|hotel|cafe|museum|bar|park|store|any",
+  "query": "short search keywords suitable for Foursquare (in English or Arabic)",
+  "open_now": true|false|null
+}
+User message: "${userMessage}"
+Make "category" guessed from the message, and "query" short and focused. If you can't detect a place intent, set intent to "other".
+  `.trim();
+
+  // طلب واحد إلى Fireworks completions
+  const payload = {
+    model: FIREWORKS_MODEL,
+    max_tokens: 120,
+    temperature: 0.1,
+    prompt: systemPrompt
+  };
+
+  const response = await fetch(FIREWORKS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": `Bearer ${DOBBY_API_KEY}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(()=>'');
+    throw new Error('Dobby API failed: ' + response.status + ' ' + text);
+  }
+  const data = await response.json();
+
+  // نحاول استخراج النص الناتج بعدة صيغ
+  let raw = '';
+  if (data.choices?.[0]?.text) raw = data.choices[0].text;
+  else if (data.choices?.[0]?.message?.content) raw = data.choices[0].message.content;
+  else if (data.text) raw = data.text;
+  else raw = JSON.stringify(data);
+
+  raw = raw.trim();
+
+  // بعض النماذج قد تُحيط JSON بنص؛ نحاول استخراج أول كائن JSON ظاهر
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  let parsed = null;
+  if (jsonMatch) {
+    try { parsed = JSON.parse(jsonMatch[0]); }
+    catch(e){ parsed = null; }
+  }
+  if (!parsed) {
+    // محاولة آخر: ابني رد افتراضي
+    parsed = { intent: "other", category: "any", query: userMessage, open_now: null };
+  }
+  return parsed;
+}
+
+/* ==== استعلام Foursquare Places v3 ==== */
+async function searchFoursquarePlaces(lat, lon, query, limit = 6) {
+  // نستخدم endpoint رسمي: fields and ll
+  const params = new URLSearchParams({
+    query: query,
+    ll: `${lat},${lon}`,
+    limit: String(limit)
+  });
+  const url = `https://api.foursquare.com/v3/places/search?${params.toString()}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/json",
+      "Authorization": FOURSQUARE_API_KEY
+    }
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=>'');
+    throw new Error('Foursquare error: ' + res.status + ' ' + t);
+  }
+  const j = await res.json();
+  return j.results || [];
+}
+
+/* ==== دالة رئيسية: معالجة رسالة المستخدم (intent -> places) ==== */
+async function handleUserMessage(rawMessage) {
+  const message = rawMessage.trim();
+  if (!message) return;
+
+  addMessage(message, 'user', false);
+  elements.lastQuery.textContent = `آخر استعلام: ${message}`;
+
+  // الحصول على الموقع (إن لم يكن مُخزن)
+  if (!state.userLocation) {
+    try {
+      showTyping('أطلب إذن الموقع...');
+      await requestUserLocation();
+      hideTyping();
+    } catch (err) {
+      hideTyping();
+      addMessage('⚠️ لم أستطع الحصول على موقعك. اكتب اسم المدينة أو اذن بالموقع لتظهر النتائج.', 'assistant');
+      return;
+    }
+  }
+
+  try {
+    showTyping('أحلّل سؤالك باستخدام Dobby...');
+    const intentObj = await askDobbyForIntent(message);
+    hideTyping();
+
+    // لو الـ intent مش بحث أماكن
+    if (!intentObj || intentObj.intent !== 'place_search') {
+      addMessage('ممكن توضح لي هل تبحث عن مكان (مطعم/فندق/كافيه) أم تريد معلومة أخرى؟', 'assistant');
+      return;
+    }
+
+    const chosenQuery = intentObj.query || message;
+    const category = intentObj.category || 'any';
+    const openNow = intentObj.open_now;
+
+    addMessage(`أبحث عن: "${chosenQuery}" (${category}) بالقرب منك...`, 'assistant');
+
+    showTyping('أجلب الأماكن من Foursquare...');
+    const places = await searchFoursquarePlaces(state.userLocation.lat, state.userLocation.lon, chosenQuery, 8);
+    hideTyping();
+
+    // اعرض النتائج في الشات والسايدبار
+    if (!places || places.length === 0) {
+      addMessage('لم أعثر على أماكن متطابقة. حاول تغيير الوصف (مثلاً: "مطعم تايلاندي").', 'assistant');
+      elements.placesList.innerHTML = '<div class="small">لا توجد نتائج</div>';
+      return;
+    }
+
+    // بناء HTML للنتائج
+    const listHtmlParts = [];
+    let assistantHtml = `<div class="strategy-card"><div class="strategy-title"><strong>الأماكن القريبة (${places.length})</strong></div><div style="margin-top:8px">`;
+    for (const p of places) {
+      const name = p.name || 'Unnamed';
+      const address = (p.location && p.location.formatted_address) ? p.location.formatted_address : (p.location?.address || '');
+      const cat = (p.categories && p.categories[0]) ? p.categories[0].name : '';
+      const distance = p.distance ? `${p.distance}m` : '';
+      const fsqId = p.fsq_id || '';
+      const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${fsqId}`;
+
+      assistantHtml += `<div class="place-card">
+        <div style="font-weight:700">${name} <span style="font-weight:600;color:var(--muted);font-size:12px"> ${distance}</span></div>
+        <div class="small">${address}</div>
+        <div class="small" style="margin-top:6px">${cat}</div>
+        <div style="margin-top:8px"><a class="btn" style="padding:6px 8px;font-size:13px" href="${p.location?.labeled_lat_lng ? `https://www.google.com/maps?q=${p.location.labeled_lat_lng[0]},${p.location.labeled_lat_lng[1]}` : googleMapsLink}" target="_blank"><i class="fas fa-map-marker-alt"></i> عرض على الخريطة</a>
+        <a class="btn" style="background:linear-gradient(135deg,#06b6d4,#0ea5a5); margin-left:8px; padding:6px 8px;font-size:13px" href="#" onclick="copyAddress('${encodeURIComponent(address || name)}');return false;"><i class="fas fa-link"></i> نسخ العنوان</a></div>
+      </div>`;
+
+      // للسيدبار
+      listHtmlParts.push(`<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.02)"><b>${name}</b><div class="small">${address}</div><div class="small">${cat}</div></div>`);
+    }
+    assistantHtml += `</div></div>`;
+
+    addMessage(assistantHtml, 'assistant', true);
+    elements.placesList.innerHTML = listHtmlParts.join('');
+  } catch (err) {
+    hideTyping();
+    console.error(err);
+    addMessage('حدث خطأ أثناء المعالجة: ' + (err.message || err), 'assistant');
+  }
+}
+
+// نسخ العنوان
+function copyAddress(encoded) {
+  const txt = decodeURIComponent(encoded);
+  navigator.clipboard?.writeText(txt).then(()=> {
+    alert('تم نسخ العنوان!');
+  }).catch(()=> alert('فشل النسخ'));
+}
+
+/* ============== ربط الازرار والاحداث ============== */
+elements.sendBtn.addEventListener('click', () => {
+  const v = elements.input.value.trim();
+  if (!v) return;
+  handleUserMessage(v);
+  elements.input.value = '';
+});
+
+elements.input.addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    elements.sendBtn.click();
+  }
+});
+
+/* init: نحاول نأخذ موقع المستخدم فور فتح الصفحة (اختياري) */
+setTimeout(()=> {
+  // لا تطلب الموقع مباشرة لو المستخدم لم يتفاعل؟ هنا نطلب عند فتح الصفحة لتحسين التجربة
+  if (!state.userLocation) {
+    requestUserLocation().catch(()=> {
+      // مينفعش نزعج المستخدم — نعرض رسالة ترحيب فقط
+      elements.locInfo.textContent = 'الموقع: غير متاح (سمح بالموقع لنتائج دقيقة)';
+    });
+  }
+}, 800);
+
+</script>
+</body>
+</html>
