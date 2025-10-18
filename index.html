@@ -1,223 +1,172 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dobby Travel AI 🌍</title>
+  <title>Dobby Tourist Assistant 🌍</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      transition: all 0.3s ease-in-out;
-    }
     body {
-      font-family: "Cairo", "Segoe UI", sans-serif;
+      font-family: "Cairo", sans-serif;
+      background: #f7f9fc;
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #0099ff 0%, #00f2fe 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-    }
-    header {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      color: white;
       text-align: center;
-      width: 100%;
-      padding: 25px 0;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.1);
     }
-    header h1 {
+    h1 {
+      background: #2b6cb0;
+      color: white;
       margin: 0;
-      font-size: 2.4em;
+      padding: 15px;
+      font-size: 24px;
     }
-    header p {
-      margin: 8px 0 0;
-      font-size: 1.2em;
-    }
-
-    form {
+    #chat {
+      max-width: 600px;
+      margin: 20px auto;
       background: white;
-      padding: 25px 30px;
-      border-radius: 16px;
-      margin: 30px auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      width: 90%;
-      max-width: 700px;
-    }
-    input {
-      padding: 12px 15px;
-      border: 1px solid #ccc;
       border-radius: 10px;
-      font-size: 1em;
-      width: 250px;
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    #messages {
+      height: 300px;
+      overflow-y: auto;
+      text-align: left;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .message {
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .user {
+      background: #bee3f8;
+      text-align: right;
+    }
+    .bot {
+      background: #edf2f7;
+      text-align: left;
+    }
+    #userInput {
+      width: 80%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
     }
     button {
-      background: #0078ff;
-      color: white;
+      padding: 10px 15px;
       border: none;
-      border-radius: 10px;
-      padding: 12px 25px;
-      font-size: 1em;
+      background: #2b6cb0;
+      color: white;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
     }
-    button:hover {
-      background: #005fd6;
-    }
-
-    .results {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      width: 95%;
-      max-width: 1000px;
-      margin-bottom: 40px;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      text-align: right;
-      position: relative;
-      overflow: hidden;
-    }
-    .card h3 {
-      margin-top: 0;
-      color: #0078ff;
-      font-size: 1.3em;
-    }
-    .card p {
-      margin: 5px 0;
-      color: #333;
-      font-size: 0.95em;
-    }
-    .footer {
-      text-align: center;
-      color: white;
-      font-size: 0.9em;
-      margin-bottom: 15px;
-      opacity: 0.8;
-    }
-    .loading {
-      text-align: center;
-      color: white;
-      font-size: 1.2em;
-    }
-    .map-container {
-      width: 100%;
+    #map {
       height: 400px;
-      margin: 20px 0;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    iframe {
       width: 100%;
-      height: 100%;
-      border: none;
+      margin-top: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🌍 Dobby Travel AI</h1>
-    <p>اكتشف أقرب الأماكن حولك باستخدام Foursquare API</p>
-  </header>
+  <h1>🤖 Dobby Tourist Assistant 🌍</h1>
 
-  <form id="searchForm">
-    <input type="text" id="query" placeholder="نوع المكان (مثلاً: مطعم، كافيه...)" required />
-    <input type="text" id="near" placeholder="اسم المدينة (مثلاً: القاهرة)" required />
-    <button type="submit">🔍 ابحث الآن</button>
-  </form>
-
-  <div class="loading" id="loading"></div>
-
-  <div id="mapContainer" class="map-container" style="display:none;">
-    <iframe id="mapFrame" loading="lazy"></iframe>
+  <div id="chat">
+    <div id="messages"></div>
+    <input id="userInput" type="text" placeholder="اكتب سؤالك هنا..." />
+    <button onclick="sendMessage()">إرسال</button>
   </div>
 
-  <div id="results" class="results"></div>
-
-  <div class="footer">© 2025 - Dobby Tourist Assistant by Ahmed 🌐</div>
+  <div id="map"></div>
 
   <script>
-    const form = document.getElementById("searchForm");
-    const resultsDiv = document.getElementById("results");
-    const loadingDiv = document.getElementById("loading");
-    const mapContainer = document.getElementById("mapContainer");
-    const mapFrame = document.getElementById("mapFrame");
+    const DOBBY_API_KEY = "fw_3ZSTYUGtSAeW8fFekpjE4HCm";
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      resultsDiv.innerHTML = "";
-      loadingDiv.innerHTML = "⏳ جاري البحث عن الأماكن...";
-      mapContainer.style.display = "none";
+    const messages = document.getElementById("messages");
 
-      const query = document.getElementById("query").value.trim();
-      const near = document.getElementById("near").value.trim();
+    function addMessage(text, sender = "bot") {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.textContent = text;
+      messages.appendChild(msg);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-      try {
-        const res = await fetch(
-          `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&near=${encodeURIComponent(near)}&limit=10`,
-          {
-            headers: {
-              Accept: "application/json",
-              Authorization: "fsq3P8UQyrdG264vCInLF++VrRVgWRjTZxtOoJW264bhwRc="
-            }
-          }
-        );
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const userText = input.value.trim();
+      if (!userText) return;
+      addMessage(userText, "user");
+      input.value = "";
 
-        if (!res.ok) {
-          const errText = await res.text();
-          loadingDiv.innerHTML = `❌ خطأ في جلب النتائج: ${errText}`;
-          return;
-        }
+      // رد مؤقت
+      addMessage("جارٍ معالجة سؤالك...");
 
+      // استدعاء Dobby API للرد الذكي
+      const dobbyResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${DOBBY_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "sentientfoundation/dobby-unhinged-llama-3-3-70b-new",
+          messages: [{ role: "user", content: userText }]
+        })
+      });
+
+      const dobbyData = await dobbyResponse.json();
+      const botReply = dobbyData?.choices?.[0]?.message?.content || "لم أفهم سؤالك.";
+      addMessage(botReply, "bot");
+    }
+
+    // 🗺️ إعداد خريطة OpenStreetMap
+    let map = L.map("map").setView([30.0444, 31.2357], 13); // افتراضي القاهرة
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // 📍 تحديد موقع المستخدم
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        map.setView([lat, lon], 15);
+        L.marker([lat, lon]).addTo(map).bindPopup("📍 موقعك الحالي").openPopup();
+
+        // 🧭 البحث عن مطاعم قريبة من موقع المستخدم
+        const query = `[out:json];
+          node["amenity"="restaurant"](around:1500,${lat},${lon});
+          out;`;
+
+        const overpassUrl = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+        const res = await fetch(overpassUrl);
         const data = await res.json();
-        loadingDiv.innerHTML = "";
 
-        if (!data.results || data.results.length === 0) {
-          resultsDiv.innerHTML = "<p style='color:white;'>⚠️ لم يتم العثور على أماكن مطابقة.</p>";
-          return;
-        }
-
-        // عرض النتائج
-        resultsDiv.innerHTML = "";
-        const firstPlace = data.results[0];
-        const lat = firstPlace.geocodes.main.latitude;
-        const lng = firstPlace.geocodes.main.longitude;
-
-        // إظهار خريطة Google حول أول نتيجة
-        mapContainer.style.display = "block";
-        mapFrame.src = `https://maps.google.com/maps?q=${lat},${lng}&z=13&output=embed`;
-
-        data.results.forEach(place => {
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <h3>${place.name}</h3>
-            <p><strong>📍 العنوان:</strong> ${place.location.formatted_address || "غير متوفر"}</p>
-            <p><strong>🏷️ التصنيف:</strong> ${place.categories?.[0]?.name || "غير محدد"}</p>
-            <p><strong>📞 الهاتف:</strong> ${place.tel || "غير متوفر"}</p>
-            <p><strong>🌐 الإحداثيات:</strong> ${place.geocodes?.main?.latitude}, ${place.geocodes?.main?.longitude}</p>
-            <p><a href="https://www.google.com/maps?q=${place.geocodes.main.latitude},${place.geocodes.main.longitude}" target="_blank">📌 فتح في Google Maps</a></p>
-          `;
-          resultsDiv.appendChild(div);
+        data.elements.forEach((el) => {
+          if (el.lat && el.lon && el.tags && el.tags.name) {
+            L.marker([el.lat, el.lon])
+              .addTo(map)
+              .bindPopup(`🍽️ ${el.tags.name}`);
+          }
         });
 
-      } catch (err) {
-        console.error(err);
-        loadingDiv.innerHTML = "<p style='color:red;'>❌ حدث خطأ أثناء الاتصال بـ API.</p>";
-      }
-    });
+        addMessage("تم تحديد موقعك وعرض أقرب المطاعم على الخريطة ✅");
+      }, () => {
+        addMessage("لم يتم السماح بالوصول إلى الموقع ❌");
+      });
+    } else {
+      addMessage("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    }
   </script>
 </body>
 </html>
