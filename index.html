@@ -3,151 +3,173 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dobby Tourist Assistant</title>
+  <title>Dobby Tourist Assistant 🌍</title>
   <style>
     body {
-      font-family: "Cairo", sans-serif;
-      background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+      font-family: "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #222;
       margin: 0;
       padding: 0;
-      text-align: center;
       direction: rtl;
-      color: #333;
     }
     header {
-      background-color: #00796b;
+      background: #0077b6;
       color: white;
-      padding: 15px 0;
-      font-size: 1.8em;
+      text-align: center;
+      padding: 15px;
+      font-size: 1.2rem;
       font-weight: bold;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-    main {
-      margin: 20px auto;
+    #chat-container {
+      display: flex;
+      flex-direction: column;
       max-width: 600px;
-      background: #fff;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
-    input, button {
-      width: 90%;
-      padding: 12px;
-      font-size: 1em;
+    #messages {
+      height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .msg {
+      margin: 10px 0;
+      padding: 10px;
       border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
+    }
+    .user {
+      background: #d1e7dd;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #e2e3e5;
+      align-self: flex-start;
+    }
+    #input-container {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      border: none;
       outline: none;
+      font-size: 1rem;
     }
     button {
-      background-color: #00796b;
+      padding: 10px 20px;
+      border: none;
+      background: #0077b6;
       color: white;
       cursor: pointer;
       font-weight: bold;
-      transition: 0.3s;
     }
     button:hover {
-      background-color: #004d40;
+      background: #023e8a;
     }
-    .result {
-      margin-top: 20px;
-      text-align: right;
-      padding: 15px;
-      background-color: #f9f9f9;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      max-height: 350px;
-      overflow-y: auto;
+    ul {
+      list-style-type: none;
+      padding: 0;
     }
-    footer {
-      margin-top: 40px;
-      padding: 10px;
-      font-size: 0.9em;
-      color: #666;
+    li {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
     }
   </style>
 </head>
 <body>
-  <header>🧳 Dobby Tourist Assistant</header>
-  <main>
-    <h3>مرحبًا بك! اسأل Dobby عن الأماكن السياحية أو المطاعم أو أي مكان ترغب في زيارته</h3>
-    <input type="text" id="userInput" placeholder="مثلاً: أقرب مطعم أو أفضل مقهى">
-    <button onclick="askDobby()">اسأل Dobby</button>
-    <div class="result" id="response"></div>
-  </main>
+  <header>🤖 Dobby Tourist Assistant</header>
 
-  <footer>🌍 يعمل بواسطة Dobby API + OpenStreetMap</footer>
+  <div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-container">
+      <input id="userInput" type="text" placeholder="اكتب سؤالك هنا...">
+      <button onclick="sendMessage()">إرسال</button>
+    </div>
+  </div>
 
   <script>
-    const DOBBY_API_KEY = "fw_3ZSTYUGtSAeW8fFekpjE4HCm";
+    const dobbyAPIKey = "fw_3ZSTYUGtSAeW8fFekpjE4HCm";
 
-    async function askDobby() {
-      const query = document.getElementById("userInput").value.trim();
-      const responseDiv = document.getElementById("response");
-      responseDiv.innerHTML = `🔍 أبحث عن: "${query}" بالقرب منك...`;
+    const messagesDiv = document.getElementById("messages");
+    const userInput = document.getElementById("userInput");
 
-      if (!query) {
-        responseDiv.innerHTML = "❗ من فضلك أدخل استفسارك أولاً.";
-        return;
-      }
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("msg", sender);
+      msg.innerHTML = text;
+      messagesDiv.appendChild(msg);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 
-      // تحديد الموقع الجغرافي للمستخدم
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
 
-          try {
-            // البحث عبر OpenStreetMap (Nominatim API)
-            const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&extratags=1&viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}`;
+      addMessage(text, "user");
+      userInput.value = "";
 
-            const placesResponse = await fetch(nominatimUrl, {
-              headers: { "Accept-Language": "ar" }
-            });
-            const places = await placesResponse.json();
+      addMessage("⏳ جاري التفكير...", "bot");
 
-            if (places.length === 0) {
-              responseDiv.innerHTML = "😕 لم أجد أماكن قريبة بهذا الاسم.";
-              return;
-            }
+      try {
+        // احصل على الموقع الحالي للمستخدم
+        const pos = await getUserLocation();
+        const { lat, lon } = pos;
 
-            let resultHTML = "<h4>📍 النتائج الأقرب:</h4><ul>";
-            places.slice(0, 10).forEach(p => {
-              resultHTML += `<li><strong>${p.display_name}</strong><br>
-              📏 الإحداثيات: ${p.lat}, ${p.lon}</li><hr>`;
-            });
-            resultHTML += "</ul>";
+        // استخدم OpenStreetMap للبحث عن أماكن قريبة
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=10&viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}`;
+        const response = await fetch(url);
+        const places = await response.json();
 
-            // إرسال الاستفسار لـ Dobby API لتوضيح أو اقتراحات إضافية
-            const dobbyResponse = await fetch("https://api.fireworks.ai/inference/v1/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${DOBBY_API_KEY}`
-              },
-              body: JSON.stringify({
-                model: "accounts/fireworks/models/mixtral-8x7b-instruct",
-                prompt: `أعطني اقتراحًا سياحيًا بناءً على المكان التالي: ${query} والموقع: ${lat},${lon}.`,
-                max_tokens: 150
-              })
-            });
+        if (places.length > 0) {
+          let resultList = "<ul>";
+          places.forEach(p => {
+            resultList += `<li><strong>${p.display_name}</strong></li>`;
+          });
+          resultList += "</ul>";
+          addMessage("📍 أقرب الأماكن التي وجدتها:<br>" + resultList, "bot");
+        } else {
+          addMessage("😕 لم أجد أماكن مطابقة لبحثك القريب.", "bot");
+        }
 
-            const dobbyData = await dobbyResponse.json();
-            const dobbyText = dobbyData?.choices?.[0]?.text || "🤖 لم أتمكن من الحصول على اقتراح إضافي.";
-
-            responseDiv.innerHTML = `${resultHTML}<br><h4>💬 اقتراح Dobby:</h4><p>${dobbyText}</p>`;
-
-          } catch (error) {
-            console.error(error);
-            responseDiv.innerHTML = "⚠ حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقًا.";
-          }
-
-        }, () => {
-          responseDiv.innerHTML = "⚠ لم أتمكن من الوصول إلى موقعك الجغرافي.";
+        // أرسل السؤال أيضًا لـ Dobby لتفسير السياق أو اقتراحات
+        const dobbyResp = await fetch("https://api.fireworks.ai/inference/v1/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${dobbyAPIKey}`
+          },
+          body: JSON.stringify({
+            model: "sentientfoundation/dobby-unhinged-llama-3-3-70b-new",
+            prompt: `User asked: ${text}. He is at coordinates ${lat}, ${lon}. Respond as a friendly Arabic tourist guide.`,
+            max_tokens: 250
+          })
         });
-      } else {
-        responseDiv.innerHTML = "⚠ المتصفح لا يدعم خاصية تحديد الموقع.";
+        const data = await dobbyResp.json();
+        const answer = data.choices?.[0]?.text || "لم أتمكن من فهم سؤالك.";
+        addMessage("🤖 " + answer, "bot");
+
+      } catch (err) {
+        console.error(err);
+        addMessage("❌ حدث خطأ أثناء المعالجة: " + err.message, "bot");
       }
+    }
+
+    function getUserLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("المتصفح لا يدعم تحديد الموقع"));
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+            (err) => reject(new Error("فشل في تحديد الموقع"))
+          );
+        }
+      });
     }
   </script>
 </body>
