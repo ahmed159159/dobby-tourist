@@ -3,127 +3,134 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dobby Tourist Assistant</title>
+  <title>Dobby Travel AI 🌍</title>
   <style>
     body {
-      font-family: 'Cairo', sans-serif;
-      background: #f4f4f9;
-      color: #333;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(to bottom right, #4facfe, #00f2fe);
+      color: #222;
       text-align: center;
-      margin: 0;
-      padding: 0;
+      padding: 40px;
     }
-    #chat {
-      margin-top: 50px;
+    h1 {
+      color: white;
+      font-size: 2.2em;
+    }
+    form {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      display: inline-block;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
     }
     input {
-      width: 80%;
       padding: 10px;
-      border-radius: 10px;
+      margin: 8px;
+      border-radius: 8px;
       border: 1px solid #ccc;
+      width: 200px;
+      font-size: 1em;
     }
     button {
+      background: #0078ff;
+      color: white;
       padding: 10px 20px;
       border: none;
-      border-radius: 10px;
-      background: #007bff;
-      color: white;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 1em;
     }
     button:hover {
-      background: #0056b3;
+      background: #005fd6;
     }
-    .message {
-      margin: 15px;
-      padding: 10px;
-      border-radius: 10px;
-      display: inline-block;
-      max-width: 80%;
+    .results {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
     }
-    .user {
-      background-color: #d1e7dd;
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      width: 280px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: left;
     }
-    .bot {
-      background-color: #e2e3e5;
+    .card h3 {
+      margin-top: 0;
+      color: #0078ff;
+    }
+    .card p {
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
-  <h1>🤖 Dobby Tourist Assistant</h1>
-  <div id="chat"></div>
-  <input id="userInput" placeholder="اسأل Dobby عن أقرب مطعم..." />
-  <button onclick="sendMessage()">إرسال</button>
+  <h1>🌍 Dobby Travel AI</h1>
+  <p>ابحث عن الأماكن القريبة باستخدام Foursquare API</p>
+
+  <form id="searchForm">
+    <input type="text" id="query" placeholder="نوع المكان (مثلاً: مطعم)" required />
+    <input type="text" id="near" placeholder="المدينة (مثلاً: Cairo)" required />
+    <button type="submit">🔍 ابحث الآن</button>
+  </form>
+
+  <div id="results" class="results"></div>
 
   <script>
-    const chatDiv = document.getElementById("chat");
+    const form = document.getElementById("searchForm");
+    const resultsDiv = document.getElementById("results");
 
-    function addMessage(text, sender) {
-      const msg = document.createElement("div");
-      msg.classList.add("message", sender);
-      msg.innerText = text;
-      chatDiv.appendChild(msg);
-      chatDiv.scrollTop = chatDiv.scrollHeight;
-    }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resultsDiv.innerHTML = "<p>⏳ جاري البحث...</p>";
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const text = input.value.trim();
-      if (!text) return;
-      addMessage(text, "user");
-      input.value = "";
+      const query = document.getElementById("query").value.trim();
+      const near = document.getElementById("near").value.trim();
 
-      addMessage("⏳ جاري البحث...", "bot");
-
-      if (text.includes("مطعم")) {
-        getNearestPlace("restaurant");
-      } else if (text.includes("كافيه")) {
-        getNearestPlace("cafe");
-      } else {
-        addMessage("❌ من فضلك اسأل عن مطعم أو كافيه", "bot");
-      }
-    }
-
-    async function getNearestPlace(query) {
-      if (!navigator.geolocation) {
-        addMessage("⚠ المتصفح لا يدعم تحديد الموقع الجغرافي", "bot");
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-
-        const apiKey = "fsq3P8UQyrdG264vCInLF++VrRVgWRjTZxtOoJW264bhwRc="; // 🔑 استخدم مفتاحك هنا
-        const url = `https://api.foursquare.com/v3/places/search?query=${query}&ll=${lat},${lon}&limit=3`;
-
-        try {
-          const res = await fetch(url, {
+      try {
+        const res = await fetch(
+          `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&near=${encodeURIComponent(near)}&limit=8`,
+          {
             headers: {
-              "Accept": "application/json",
-              "Authorization": apiKey
+              Authorization: "fsq3P8UQyrdG264vCInLF++VrRVgWRjTZxtOoJW264bhwRc=",
+              accept: "application/json"
             }
-          });
-
-          const data = await res.json();
-          chatDiv.querySelector(".bot:last-child").remove();
-
-          if (!data.results || data.results.length === 0) {
-            addMessage("😕 لم أجد أماكن قريبة.", "bot");
-            return;
           }
+        );
 
-          let msg = `📍 أقرب ${query}:\n\n`;
-          data.results.forEach((place) => {
-            msg += `🏠 ${place.name}\n📍 ${place.location.formatted_address}\n\n`;
-          });
-          addMessage(msg, "bot");
-
-        } catch (error) {
-          chatDiv.querySelector(".bot:last-child").remove();
-          addMessage(`❌ خطأ أثناء الاتصال بـ Foursquare: ${error}`, "bot");
+        if (!res.ok) {
+          const errText = await res.text();
+          resultsDiv.innerHTML = `<p style="color:red;">❌ خطأ في جلب النتائج: ${errText}</p>`;
+          return;
         }
-      });
-    }
+
+        const data = await res.json();
+        resultsDiv.innerHTML = "";
+
+        if (data.results.length === 0) {
+          resultsDiv.innerHTML = "<p>⚠️ لم يتم العثور على نتائج.</p>";
+          return;
+        }
+
+        data.results.forEach(place => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>${place.name}</h3>
+            <p><strong>📍 العنوان:</strong> ${place.location.formatted_address || "غير متوفر"}</p>
+            <p><strong>🏷️ التصنيف:</strong> ${place.categories?.[0]?.name || "غير محدد"}</p>
+            <p><strong>🌐 الإحداثيات:</strong> ${place.geocodes?.main?.latitude}, ${place.geocodes?.main?.longitude}</p>
+          `;
+          resultsDiv.appendChild(div);
+        });
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = "<p style='color:red;'>❌ حدث خطأ أثناء الاتصال بـ API.</p>";
+      }
+    });
   </script>
 </body>
 </html>
