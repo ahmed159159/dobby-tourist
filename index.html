@@ -1,176 +1,777 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dobby Tourist Assistant 🌍</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f8fafc;
-      color: #222;
-      margin: 0;
-      padding: 0;
-      direction: rtl;
-    }
-    header {
-      background: #0077b6;
-      color: white;
-      text-align: center;
-      padding: 15px;
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
-    #chat-container {
-      display: flex;
-      flex-direction: column;
-      max-width: 600px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    #messages {
-      height: 400px;
-      overflow-y: auto;
-      padding: 10px;
-    }
-    .msg {
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    .user {
-      background: #d1e7dd;
-      align-self: flex-end;
-    }
-    .bot {
-      background: #e2e3e5;
-      align-self: flex-start;
-    }
-    #input-container {
-      display: flex;
-      border-top: 1px solid #ddd;
-    }
-    #userInput {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      outline: none;
-      font-size: 1rem;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      background: #0077b6;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #023e8a;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      padding: 8px;
-      border-bottom: 1px solid #ddd;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dobby Travel Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="dobby-logo.png">
+    <style>
+        /* --- same styling as your original file (kept intact) --- */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --glow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .app-container { min-height: 100vh; display:flex; flex-direction:column; max-width:1400px; margin:0 auto; padding:20px; gap:20px; }
+        .header { background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%); border:1px solid var(--border); border-radius:24px; padding:30px; text-align:center; position:relative; overflow:hidden; backdrop-filter: blur(20px); }
+        .header::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); animation: shimmer 3s ease-in-out infinite; }
+        @keyframes shimmer { 0%,100%{transform:translateX(-100%);}50%{transform:translateX(100%);} }
+        .header-content { position:relative; z-index:2; }
+        .logo { font-size:4rem; margin-bottom:15px; filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.5)); animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0px);}50%{transform:translateY(-10px);} }
+        .title { font-size:2.5rem; font-weight:800; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:10px; }
+        .subtitle { font-size:1.2rem; color:var(--text-secondary); margin-bottom:20px; }
+        .status-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:var(--success); padding:8px 16px; border-radius:50px; font-size:0.9rem; font-weight:500; }
+        .status-dot { width:8px; height:8px; background:var(--success); border-radius:50%; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.2);} }
+
+        .main-content { display:grid; grid-template-columns:1fr 300px; gap:20px; flex:1; }
+        .chat-container { background:var(--bg-secondary); border:1px solid var(--border); border-radius:24px; display:flex; flex-direction:column; overflow:hidden; backdrop-filter: blur(20px); box-shadow:var(--shadow); }
+        .chat-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color:white; padding:20px; display:flex; align-items:center; gap:15px; position:relative; }
+        .chat-header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); }
+        .dobby-avatar { width:50px; height:50px; background: rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; backdrop-filter: blur(10px); }
+        .chat-info h3 { font-size:1.3rem; font-weight:600; margin-bottom:5px; }
+        .chat-info p { font-size:0.9rem; opacity:0.9; }
+
+        .chat-messages { flex:1; padding:20px; overflow-y:auto; min-height:500px; max-height:600px; display:flex; flex-direction:column; gap:20px; }
+        .message { display:flex; gap:12px; animation: messageSlide 0.4s ease-out; opacity:0; animation-fill-mode:forwards; }
+        @keyframes messageSlide { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+        .user .message-avatar { background: linear-gradient(135deg, var(--primary), var(--secondary)); color:white; }
+        .assistant .message-avatar { background: linear-gradient(135deg, var(--success), #059669); color:white; }
+        .message-content { max-width:70%; padding:16px 20px; border-radius:18px; position:relative; font-size:0.95rem; line-height:1.6; }
+        .user .message-content { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color:white; border-bottom-right-radius:6px; }
+        .assistant .message-content { background: var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border); border-bottom-left-radius:6px; }
+
+        .job-card, .place-card { background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(217, 119, 6, 0.03)); border:1px solid rgba(245,158,11,0.08); border-radius:16px; padding:16px; margin:10px 0; position:relative; overflow:hidden; transition:all 0.3s ease; }
+        .job-card:hover, .place-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.08); }
+        .job-header { display:flex; justify-content:between; align-items:flex-start; margin-bottom:8px; }
+        .job-title { font-size:1.05rem; font-weight:700; color:var(--text-primary); margin-bottom:6px; }
+        .job-company { color:var(--warning); font-weight:600; margin-bottom:4px; }
+        .job-location { color:var(--text-secondary); font-size:0.9rem; margin-bottom:10px; }
+        .job-salary { background: rgba(16,185,129,0.06); color: var(--success); padding:4px 10px; border-radius:20px; font-size:0.8rem; font-weight:600; display:inline-block; margin-bottom:8px; }
+        .job-actions, .place-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+        .strategy-card { background: linear-gradient(135d, rgba(139, 92, 246, 0.05), rgba(99, 102, 241, 0.05)); border:1px solid rgba(139,92,246,0.08); border-radius:16px; padding:16px; margin:10px 0; position:relative; }
+        .strategy-title { font-weight:700; color:var(--secondary); margin-bottom:10px; display:flex; align-items:center; gap:10px; font-size:1.05rem; }
+        .strategy-content { line-height:1.6; color:var(--text-primary); }
+
+        .message-content h1, .message-content h2, .message-content h3, .message-content h4, .message-content h5, .message-content h6 { font-weight:700; color:var(--primary); margin:15px 0 8px 0; border-bottom:2px solid var(--border); padding-bottom:3px; }
+        .message-content strong { font-weight:700; color:var(--secondary); }
+        .message-content ul, .message-content ol { margin:8px 0; padding-left:18px; }
+        .message-content li { margin:4px 0; line-height:1.4; }
+        .message-content p { margin:8px 0; }
+        .message-content hr { border:none; border-top:1px solid var(--border); margin:15px 0; }
+
+        .typing-indicator { display:flex; align-items:center; gap:10px; color:var(--text-muted); font-style:italic; padding:10px 0; }
+        .typing-dots { display:flex; gap:4px; } .typing-dot { width:8px; height:8px; background:var(--text-muted); border-radius:50%; animation: typingBounce 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay:-0.32s; } .typing-dot:nth-child(2) { animation-delay:-0.16s; }
+        @keyframes typingBounce { 0%,80%,100%{ transform: scale(0.8); opacity: 0.5;} 40%{ transform: scale(1); opacity:1;} }
+
+        .chat-input { padding:20px; background:var(--bg-tertiary); border-top:1px solid var(--border); }
+        .suggestions { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
+        .suggestion-chip { background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-secondary); padding:8px 16px; border-radius:20px; font-size:0.85rem; cursor:pointer; transition:all 0.3s ease; white-space:nowrap; }
+        .suggestion-chip:hover { background:var(--primary); color:white; border-color:var(--primary); transform:translateY(-1px); }
+
+        .input-container { position:relative; display:flex; gap:12px; }
+        .message-input { flex:1; background:var(--bg-secondary); border:2px solid var(--border); color:var(--text-primary); padding:16px 20px; border-radius:25px; font-size:1rem; outline:none; transition:all 0.3s ease; resize:none; min-height:50px; max-height:120px; font-family:inherit; }
+        .message-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+        .message-input::placeholder { color:var(--text-muted); }
+        .send-button { width:50px; height:50px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; border-radius:50%; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.2rem; transition:all 0.3s ease; flex-shrink:0; }
+        .send-button:hover:not(:disabled) { transform:scale(1.05); box-shadow:var(--glow); }
+        .send-button:disabled { opacity:0.5; cursor:not-allowed; }
+
+        .sidebar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:24px; padding:20px; backdrop-filter: blur(20px); box-shadow:var(--shadow); height:fit-content; }
+        .sidebar-section { margin-bottom:30px; }
+        .sidebar-title { font-size:1.1rem; font-weight:600; color:var(--text-primary); margin-bottom:15px; display:flex; align-items:center; gap:10px; }
+        .quick-actions { display:flex; flex-direction:column; gap:10px; }
+        .quick-action { background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-secondary); padding:12px 16px; border-radius:12px; cursor:pointer; transition:all 0.3s ease; font-size:0.9rem; text-align:left; }
+        .quick-action:hover { background:var(--primary); color:white; border-color:var(--primary); transform:translateX(5px); }
+
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .stat-card { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:12px; padding:15px; text-align:center; }
+        .stat-number { font-size:1.5rem; font-weight:700; color:var(--primary); display:block; }
+        .stat-label { font-size:0.8rem; color:var(--text-muted); margin-top:5px; }
+
+        .recent-searches { display:flex; flex-direction:column; gap:8px; }
+        .recent-search { background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-secondary); padding:10px; border-radius:10px; font-size:0.85rem; cursor:pointer; transition:all 0.3s ease; }
+        .recent-search:hover { background:var(--primary); color:white; border-color:var(--primary); }
+
+        .chat-messages::-webkit-scrollbar { width:6px; }
+        .chat-messages::-webkit-scrollbar-track { background:var(--bg-secondary); }
+        .chat-messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+        .chat-messages::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
+
+        @media (max-width:1024px) { .main-content { grid-template-columns:1fr; } .sidebar { order:-1; } .stats-grid { grid-template-columns:repeat(4,1fr); } }
+        @media (max-width:768px) { .app-container { padding:10px; gap:15px; } .header { padding:20px; } .title { font-size:2rem; } .logo { font-size:3rem; } .message-content { max-width:85%; } .suggestions { flex-direction:column; } .stats-grid { grid-template-columns:1fr 1fr; } }
+
+        .loading { opacity:0.7; } .pulse { animation:pulse 2s infinite; } .error-message { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: var(--error); } .success-message { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--success); }
+    </style>
 </head>
 <body>
-  <header>🤖 Dobby Tourist Assistant</header>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-content">
+                <img src="dobby-logo.png" alt="Dobby Logo" class="logo" style="width:120px;height:120px;object-fit:contain;margin-bottom:15px;filter:drop-shadow(0 0 20px rgba(139,92,246,0.5));animation:float 3s ease-in-out infinite;">
+                <h1 class="title">Dobby Travel Assistant</h1>
+                <p class="subtitle">Your smart travel companion — find places to eat, drink, and visit.</p>
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>AI Ready • Travel Mode</span>
+                </div>
+            </div>
+        </header>
 
-  <div id="chat-container">
-    <div id="messages"></div>
-    <div id="input-container">
-      <input id="userInput" type="text" placeholder="اكتب سؤالك هنا...">
-      <button onclick="sendMessage()">إرسال</button>
+        <main class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="dobby-avatar">
+                        <img src="dobby-logo.png" alt="Dobby Logo" style="width:40px;height:40px;object-fit:contain;border-radius:50%;box-shadow:0 0 8px rgba(139,92,246,0.2);background:#fff;">
+                    </div>
+                    <div class="chat-info">
+                        <h3>Dobby Travel</h3>
+                        <p>Ask about places to eat, drink, and visit — in English.</p>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message">
+                            <img src="dobby-logo.png" alt="Dobby Logo" style="width:40px;height:40px;object-fit:contain;border-radius:50%;box-shadow:0 0 8px rgba(139,92,246,0.2);background:#fff;">
+                        </div>
+                        <div class="message-content">
+                            <strong>Welcome to Dobby Travel Assistant!</strong><br><br>
+                            Ask me about places to eat, drink, or visit. Try: <em>"Find a coffee shop near me"</em> or <em>"Best pizza in Cairo"</em>.<br><br>
+                            I can use your location if you allow it, or you can type a city/name.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <div class="suggestions">
+                        <div class="suggestion-chip" onclick="sendSuggestion('Find coffee near me')">☕ Coffee near me</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('Best pizza in town')">🍕 Best pizza</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('Top tourist attractions nearby')">📍 Attractions</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('Good bars nearby')">🍸 Bars</div>
+                    </div>
+
+                    <div class="input-container">
+                        <textarea class="message-input" id="messageInput" placeholder="Ask Dobby about places (in English)..." rows="1"></textarea>
+                        <button class="send-button" id="sendButton" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title"><i class="fas fa-chart-bar"></i> Session Stats</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-number" id="placesFound">0</span>
+                            <div class="stat-label">Places Found</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="queriesAnswered">1</span>
+                            <div class="stat-label">Queries</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="messagesExchanged">1</span>
+                            <div class="stat-label">Messages</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="recommendationsMade">0</span>
+                            <div class="stat-label">Recommendations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title"><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="sendSuggestion('Find restaurants near me')">🌐 Nearby Restaurants</div>
+                        <div class="quick-action" onclick="sendSuggestion('Find attractions in Paris')">🗼 Attractions in City</div>
+                        <div class="quick-action" onclick="sendSuggestion('Find cheap eats near me')">💸 Cheap Eats</div>
+                        <div class="quick-action" onclick="sendSuggestion('Best rooftop bars')">🌃 Rooftop Bars</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title"><i class="fas fa-history"></i> Recent Searches</h3>
+                    <div class="recent-searches" id="recentSearches"><div class="recent-search">No recent searches yet</div></div>
+                </div>
+            </aside>
+        </main>
     </div>
-  </div>
 
-  <script>
-    const dobbyAPIKey = "fw_3ZSTYUGtSAeW8fFekpjE4HCm";
+    <script type="module">
+        // ----------------------------
+        // CONFIG (keys inlined per request)
+        // ----------------------------
+        const CONFIG = {
+            GEOAPIFY_KEY: "5b4260b421284bbd8f5e10b656279436",
+            DOBBY_KEY: "fw_3ZVw4csVhBzeyBqkw6NAt1jd",
+            MAX_PLACES: 6,
+            MAX_TOKENS: 450
+        };
 
-    const messagesDiv = document.getElementById("messages");
-    const userInput = document.getElementById("userInput");
+        // ----------------------------
+        // State & DOM elements
+        // ----------------------------
+        const state = {
+            isLoading: false,
+            placesFound: 0,
+            queriesAnswered: 1,
+            messagesExchanged: 1,
+            recommendationsMade: 0,
+            recentSearches: [],
+            waitingForLocation: false,
+            lastDetectedIntent: null,
+            userCoords: null // {lat, lon} if available
+        };
 
-    function addMessage(text, sender) {
-      const msg = document.createElement("div");
-      msg.classList.add("msg", sender);
-      msg.innerHTML = text;
-      messagesDiv.appendChild(msg);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+        const elements = {
+            chatMessages: document.getElementById('chatMessages'),
+            messageInput: document.getElementById('messageInput'),
+            sendButton: document.getElementById('sendButton'),
+            placesFoundStat: document.getElementById('placesFound'),
+            queriesStat: document.getElementById('queriesAnswered'),
+            messagesStat: document.getElementById('messagesExchanged'),
+            recommendationsStat: document.getElementById('recommendationsMade'),
+            recentSearches: document.getElementById('recentSearches')
+        };
 
-    async function sendMessage() {
-      const text = userInput.value.trim();
-      if (!text) return;
-
-      addMessage(text, "user");
-      userInput.value = "";
-
-      addMessage("⏳ جاري التفكير...", "bot");
-
-      try {
-        // احصل على الموقع الحالي للمستخدم
-        const pos = await getUserLocation();
-        const { lat, lon } = pos;
-
-        // استخدم OpenStreetMap للبحث عن أماكن قريبة
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=10&viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}`;
-        const response = await fetch(url);
-        const places = await response.json();
-
-        if (places.length > 0) {
-          let resultList = "<ul>";
-          places.forEach(p => {
-            resultList += `<li><strong>${p.display_name}</strong></li>`;
-          });
-          resultList += "</ul>";
-          addMessage("📍 أقرب الأماكن التي وجدتها:<br>" + resultList, "bot");
-        } else {
-          addMessage("😕 لم أجد أماكن مطابقة لبحثك القريب.", "bot");
+        // ----------------------------
+        // Initialization
+        // ----------------------------
+        function init() {
+            setupEventListeners();
+            autoResizeTextarea();
+            loadRecentSearches();
+            tryGetGeolocation(); // attempt to get user location proactively
         }
 
-        // أرسل السؤال أيضًا لـ Dobby لتفسير السياق أو اقتراحات
-        const dobbyResp = await fetch("https://api.fireworks.ai/inference/v1/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${dobbyAPIKey}`
-          },
-          body: JSON.stringify({
-            model: "sentientfoundation/dobby-unhinged-llama-3-3-70b-new",
-            prompt: `User asked: ${text}. He is at coordinates ${lat}, ${lon}. Respond as a friendly Arabic tourist guide.`,
-            max_tokens: 250
-          })
-        });
-        const data = await dobbyResp.json();
-        const answer = data.choices?.[0]?.text || "لم أتمكن من فهم سؤالك.";
-        addMessage("🤖 " + answer, "bot");
-
-      } catch (err) {
-        console.error(err);
-        addMessage("❌ حدث خطأ أثناء المعالجة: " + err.message, "bot");
-      }
-    }
-
-    function getUserLocation() {
-      return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error("المتصفح لا يدعم تحديد الموقع"));
-        } else {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-            (err) => reject(new Error("فشل في تحديد الموقع"))
-          );
+        function setupEventListeners() {
+            elements.messageInput.addEventListener('keydown', handleKeyPress);
+            elements.messageInput.addEventListener('input', autoResizeTextarea);
+            elements.messageInput.addEventListener('paste', () => setTimeout(autoResizeTextarea, 10));
         }
-      });
-    }
-  </script>
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function autoResizeTextarea() {
+            const textarea = elements.messageInput;
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // Try to get user's geolocation (optional)
+        function tryGetGeolocation() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                state.userCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                console.log('User location obtained:', state.userCoords);
+            }, (err) => {
+                console.warn('Geolocation not available or denied', err);
+            }, { timeout: 7000 });
+        }
+
+        // ----------------------------
+        // Send Message (main handler)
+        // ----------------------------
+        async function sendMessage() {
+            const raw = elements.messageInput.value.trim();
+            if (!raw || state.isLoading) return;
+
+            addMessage(raw, 'user');
+            elements.messageInput.value = '';
+            autoResizeTextarea();
+            updateStats({ messagesExchanged: state.messagesExchanged + 1 });
+            setLoading(true);
+
+            try {
+                const lower = raw.toLowerCase();
+
+                // Travel/place intent detection
+                const placeKeywords = ['restaurant', 'restaurants', 'eat', 'food', 'coffee', 'cafe', 'bar', 'bars', 'pub', 'pizza', 'sushi', 'best', 'near me', 'nearby', 'attraction', 'tourist', 'museum', 'park', 'beach'];
+                const intentMatch = placeKeywords.some(k => lower.includes(k));
+
+                // If message explicitly includes "in <city>" or "near <place>" we'll extract it in a simple way
+                let extractedLocation = extractLocationFromText(raw);
+
+                if (intentMatch) {
+                    // If we have coords or an explicit location, perform search
+                    if (state.userCoords && lower.includes('near me') || lower.includes('nearby')) {
+                        // use geolocation
+                        await handlePlaceSearch(raw, { lat: state.userCoords.lat, lon: state.userCoords.lon });
+                    } else if (extractedLocation) {
+                        await handlePlaceSearch(raw, null, extractedLocation);
+                    } else if (state.userCoords) {
+                        await handlePlaceSearch(raw, { lat: state.userCoords.lat, lon: state.userCoords.lon });
+                    } else {
+                        // Ask user for a location or allow geolocation
+                        state.waitingForLocation = true;
+                        state.lastDetectedIntent = raw;
+                        addMessage("Do you want results near your current location? If yes, please allow location access in your browser, or type a city/location (e.g., 'Cairo' or 'Downtown Amman').", 'assistant');
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                // Otherwise, treat as a general travel question — send to Dobby (AI)
+                showTypingIndicator();
+                const dobbyResponse = await getDobbyResponse(raw, {
+                    role: 'travel_assistant',
+                    instructions: "You are Dobby, a professional travel assistant. Answer in concise, helpful English. When user asks for recommendations, suggest 3 top options with short reasons."
+                });
+                hideTypingIndicator();
+                addMessage(dobbyResponse, 'assistant', null, true);
+                updateStats({ queriesAnswered: state.queriesAnswered + 1 });
+
+            } catch (err) {
+                console.error('Error in sendMessage:', err);
+                hideTypingIndicator();
+                addMessage(`Error: ${err.message}`, 'assistant', 'error-message');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Simple extractor for "in <city>" patterns
+        function extractLocationFromText(text) {
+            // look for "in <CityName>" or "at <CityName>"
+            const inMatch = text.match(/\b(?:in|at|inside)\s+([A-Za-z\u00C0-\u017F\s\-]+)/i);
+            if (inMatch) {
+                return inMatch[1].trim();
+            }
+            // fallback: look for comma-separated (e.g., "Best pizza, Cairo")
+            const parts = text.split(',');
+            if (parts.length >= 2) {
+                return parts[parts.length - 1].trim();
+            }
+            return null;
+        }
+
+        // ----------------------------
+        // Place search (Geoapify)
+        // ----------------------------
+        async function handlePlaceSearch(originalQuery, coords = null, city = null) {
+            try {
+                showTypingIndicator('Searching places for you...');
+                console.log('handlePlaceSearch', originalQuery, coords, city);
+
+                // Build Geoapify request
+                // Prefer text parameter; if coords available we bias via filter=circle or bias=proximity
+                let url = 'https://api.geoapify.com/v2/places?';
+                const params = new URLSearchParams();
+                params.append('limit', String(CONFIG.MAX_PLACES));
+                params.append('apiKey', CONFIG.GEOAPIFY_KEY);
+
+                // Determine category or text to search
+                // Use a short 'text' derived from originalQuery, focusing on nouns like 'coffee', 'pizza', 'museum'
+                const searchText = derivePlaceText(originalQuery);
+                params.append('text', searchText);
+
+                if (coords) {
+                    // bias around user's coords with a radius filter of 5000m
+                    params.append('filter', `circle:${coords.lon},${coords.lat},5000`);
+                    params.append('bias', `proximity:${coords.lon},${coords.lat}`);
+                } else if (city) {
+                    // use city as bias: set 'lang' param and leave text
+                    params.append('bias', `place:${encodeURIComponent(city)}`);
+                }
+
+                url += params.toString();
+
+                const resp = await fetch(url);
+                if (!resp.ok) {
+                    throw new Error(`Geoapify error: ${resp.status}`);
+                }
+                const data = await resp.json();
+                const places = (data.features || []).map(f => ({
+                    name: f.properties.name || f.properties.poi?.name || 'Unknown',
+                    address: buildAddressFromProps(f.properties),
+                    lat: f.properties.lat,
+                    lon: f.properties.lon,
+                    category: f.properties.categories ? f.properties.categories.split(',')[0] : (f.properties.poi?.category || ''),
+                    url: f.properties.url || f.properties.website || `https://maps.geoapify.com/v1/staticmap?style=osm-bright&marker=lonlat:${f.properties.lon},${f.properties.lat};type:material&width=600&height=300&apiKey=${CONFIG.GEOAPIFY_KEY}`
+                }));
+
+                hideTypingIndicator();
+
+                if (!places.length) {
+                    addMessage(`I couldn't find places for "${originalQuery}". Try a different query or specify a city.`, 'assistant', 'error-message');
+                    // prompt again for location if needed
+                    state.waitingForLocation = true;
+                    state.lastDetectedIntent = originalQuery;
+                    return;
+                }
+
+                addMessage(`Found ${places.length} results for "${searchText}":`, 'assistant', null, true);
+
+                // display places
+                places.forEach(p => {
+                    const html = createPlaceCard(p);
+                    addMessage(html, 'assistant', null, true);
+                });
+
+                // Ask Dobby (AI) to summarize and recommend top 3
+                showTypingIndicator('Preparing recommendations...');
+                const dobbyPrompt = `User query: "${originalQuery}"
+You found these places: ${places.map((p, i) => `${i+1}. ${p.name} — ${p.address}`).join('\n')}
+
+As Dobby, a professional travel assistant, recommend the top 3 places from this list for the user and give one short reason for each. Keep it concise in English.`;
+                const dobbyResp = await getDobbyResponse(dobbyPrompt, { role: 'travel_assistant', instructions: 'Short, 3 recommendations, one sentence each.' });
+                hideTypingIndicator();
+
+                const recHtml = `
+                    <div class="strategy-card">
+                        <div class="strategy-title"><i class="fas fa-star"></i> Top Recommendations</div>
+                        <div class="strategy-content">${formatDobbyResponse(dobbyResp)}</div>
+                    </div>
+                `;
+                addMessage(recHtml, 'assistant', null, true);
+
+                // update stats
+                updateStats({
+                    placesFound: state.placesFound + places.length,
+                    recommendationsMade: state.recommendationsMade + 1,
+                    queriesAnswered: state.queriesAnswered + 1
+                });
+
+                addToRecentSearches(originalQuery);
+
+            } catch (err) {
+                hideTypingIndicator();
+                console.error('handlePlaceSearch error', err);
+                addMessage(`Error fetching places: ${err.message}`, 'assistant', 'error-message');
+            }
+        }
+
+        function derivePlaceText(text) {
+            // crude heuristic: if user used certain words prefer them explicitly
+            const keywords = ['coffee', 'cafe', 'restaurant', 'pizza', 'sushi', 'bar', 'museum', 'park', 'beach', 'pub', 'breakfast', 'lunch', 'dinner', 'bakery'];
+            const lower = text.toLowerCase();
+            for (const k of keywords) {
+                if (lower.includes(k)) return k;
+            }
+            // fallback: return entire text (Geoapify will attempt a match)
+            return text;
+        }
+
+        function buildAddressFromProps(props) {
+            const parts = [];
+            if (props.address_line1) parts.push(props.address_line1);
+            if (props.address_line2) parts.push(props.address_line2);
+            if (props.city) parts.push(props.city);
+            if (props.state) parts.push(props.state);
+            if (props.country) parts.push(props.country);
+            return parts.join(', ') || (props.formatted || 'Address not available');
+        }
+
+        function createPlaceCard(place) {
+            return `
+                <div class="place-card">
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">${escapeHtml(place.name)}</div>
+                            <div class="job-company">${escapeHtml(place.category || '')}</div>
+                            <div class="job-location">${escapeHtml(place.address)}</div>
+                            <div class="job-salary">${place.lat ? '📍 ' + place.lat.toFixed(4) + ', ' + place.lon.toFixed(4) : ''}</div>
+                        </div>
+                    </div>
+                    <div class="place-actions">
+                        <a href="${place.url || '#'}" class="job-link" target="_blank"><i class="fas fa-map-marker-alt"></i> View</a>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}" class="job-link" target="_blank"><i class="fas fa-directions"></i> Directions</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ----------------------------
+        // Dobby AI integration (Fireworks API)
+        // ----------------------------
+        async function getDobbyResponse(userMessage, opts = {}) {
+            // opts: { role: 'travel_assistant', instructions: '...' }
+            const role = (opts.role || 'travel_assistant');
+            const instructions = (opts.instructions || 'You are Dobby, a helpful travel assistant. Answer concisely in English.');
+
+            const systemPrompt = `You are Dobby, a professional travel assistant and local guide.
+Instructions: ${instructions}
+
+User message: "${userMessage}"
+
+Provide a concise, practical response in English.`;
+
+            const payload = {
+                model: "accounts/sentientfoundation-serverless/models/dobby-mini-unhinged-plus-llama-3-1-8b",
+                prompt: systemPrompt,
+                max_tokens: CONFIG.MAX_TOKENS,
+                top_p: 0.9,
+                top_k: 40,
+                presence_penalty: 0.3,
+                frequency_penalty: 0.3,
+                temperature: 0.7
+            };
+
+            const response = await fetch("https://api.fireworks.ai/inference/v1/completions", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${CONFIG.DOBBY_KEY}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Dobby API failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            // parse several possible fields (robust parsing)
+            let text = '';
+            if (data.choices && data.choices[0]) {
+                if (data.choices[0].text) text = data.choices[0].text.trim();
+                else if (data.choices[0].message && data.choices[0].message.content) text = data.choices[0].message.content.trim();
+            } else if (data.text) text = data.text.trim();
+            else if (data.response) text = data.response.trim();
+            else if (data.content) text = data.content.trim();
+
+            console.log('Dobby raw response:', data);
+            return text || 'Sorry, I could not generate an answer.';
+        }
+
+        // ----------------------------
+        // Utilities: message rendering, typing indicator, stats, storage
+        // ----------------------------
+        function addMessage(content, sender, additionalClass = null, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            if (sender === 'user') {
+                avatarDiv.textContent = '👤';
+            } else {
+                const img = document.createElement('img');
+                img.src = 'dobby-logo.png';
+                img.alt = 'Dobby Logo';
+                img.style.width = '40px'; img.style.height = '40px'; img.style.objectFit = 'contain';
+                img.style.borderRadius = '50%'; img.style.boxShadow = '0 0 8px rgba(139,92,246,0.2)'; img.style.background = '#fff';
+                avatarDiv.appendChild(img);
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `message-content ${additionalClass || ''}`;
+
+            if (isHtml) {
+                contentDiv.innerHTML = content;
+            } else {
+                contentDiv.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            }
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            elements.chatMessages.appendChild(messageDiv);
+
+            setTimeout(() => { messageDiv.style.animation = 'messageSlide 0.4s ease-out forwards'; }, 50);
+            scrollToBottom();
+        }
+
+        function showTypingIndicator(customText = "Dobby is thinking...") {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'message assistant';
+            typingDiv.innerHTML = `
+                <div class="message-avatar">
+                    <img src="dobby-logo.png" alt="Dobby Logo" style="width:40px;height:40px;object-fit:contain;border-radius:50%;box-shadow:0 0 8px rgba(139,92,246,0.2);background:#fff;">
+                </div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <span>${escapeHtml(customText)}</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            elements.chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function hideTypingIndicator() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        function setLoading(loading) {
+            state.isLoading = loading;
+            elements.sendButton.disabled = loading;
+            elements.messageInput.disabled = loading;
+            if (loading) {
+                elements.sendButton.innerHTML = '<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+                elements.sendButton.classList.add('loading');
+            } else {
+                elements.sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                elements.sendButton.classList.remove('loading');
+            }
+        }
+
+        function updateStats(updates) {
+            Object.keys(updates).forEach(key => {
+                if (state[key] !== undefined) {
+                    state[key] = updates[key];
+                    const element = document.getElementById(key) || elements[key + 'Stat'];
+                    if (element) {
+                        element.textContent = state[key];
+                        element.classList.add('pulse');
+                        setTimeout(() => element.classList.remove('pulse'), 1000);
+                    }
+                }
+            });
+        }
+
+        function addToRecentSearches(term) {
+            if (!term) return;
+            if (!state.recentSearches.includes(term)) {
+                state.recentSearches.unshift(term);
+                if (state.recentSearches.length > 6) state.recentSearches.pop();
+                updateRecentSearchesDisplay();
+                saveRecentSearches();
+            }
+        }
+
+        function updateRecentSearchesDisplay() {
+            elements.recentSearches.innerHTML = '';
+            if (state.recentSearches.length === 0) {
+                elements.recentSearches.innerHTML = '<div class="recent-search">No recent searches yet</div>';
+                return;
+            }
+            state.recentSearches.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'recent-search';
+                div.textContent = s;
+                div.onclick = () => { elements.messageInput.value = s; autoResizeTextarea(); elements.messageInput.focus(); };
+                elements.recentSearches.appendChild(div);
+            });
+        }
+
+        function saveRecentSearches() {
+            try { localStorage.setItem('dobby_travel_recent', JSON.stringify(state.recentSearches)); } catch (e) { /* ignore */ }
+        }
+
+        function loadRecentSearches() {
+            try {
+                const saved = localStorage.getItem('dobby_travel_recent');
+                if (saved) {
+                    state.recentSearches = JSON.parse(saved);
+                    updateRecentSearchesDisplay();
+                }
+            } catch (e) {}
+        }
+
+        function scrollToBottom() {
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
+
+        function sendSuggestion(s) {
+            elements.messageInput.value = s;
+            elements.messageInput.focus();
+            autoResizeTextarea();
+        }
+
+        // ----------------------------
+        // Format Dobby response into HTML (simple)
+        // ----------------------------
+        function formatDobbyResponse(text) {
+            const escaped = escapeHtml(text);
+            // convert simple markdown-like lines to paragraphs and lists
+            let html = escaped.replace(/\r\n/g, '\n').replace(/\n{2,}/g, '</p><p>');
+            html = '<p>' + html.replace(/\n/g, '<br>') + '</p>';
+            return html;
+        }
+
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe;
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // ----------------------------
+        // If user was asked for location and then replies with location text
+        // ----------------------------
+        (function watchForLocationReply() {
+            // intercept messages: if waitingForLocation is true and user types something, treat it as city
+            const originalSend = sendMessage;
+            window.sendMessage = async function() {
+                const pending = state.waitingForLocation;
+                await originalSend();
+                if (pending && !state.isLoading && state.lastDetectedIntent) {
+                    // after the user replied, check the last user message (we just sent it)
+                    // Grab last user message text
+                    const nodes = [...document.querySelectorAll('.message.user .message-content')];
+                    if (nodes.length) {
+                        const lastText = nodes[nodes.length -1].innerText || nodes[nodes.length -1].textContent || '';
+                        if (lastText && state.waitingForLocation) {
+                            state.waitingForLocation = false;
+                            // call place search with city text
+                            await handlePlaceSearch(state.lastDetectedIntent, null, lastText.trim());
+                            state.lastDetectedIntent = null;
+                        }
+                    }
+                }
+            }
+        })();
+
+        // expose sendSuggestion (used by buttons)
+        window.sendSuggestion = sendSuggestion;
+
+        // initialize
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
