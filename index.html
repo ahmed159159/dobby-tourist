@@ -7,7 +7,6 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link rel="icon" type="image/png" href="dobby-logo.png">
 <style>
-/* ⬇️ كل التنسيقات الأصلية (بدون حذف) */
 :root {
   --primary:#6366f1;--primary-dark:#4f46e5;--secondary:#8b5cf6;--success:#10b981;
   --warning:#f59e0b;--error:#ef4444;--bg-primary:#0f172a;--bg-secondary:#1e293b;
@@ -79,7 +78,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--tex
         </div>
         <div class="input-container">
           <textarea id="messageInput" class="message-input" placeholder="Ask Dobby about places..."></textarea>
-          <button id="sendButton" class="send-button" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+          <button id="sendButton" class="send-button"><i class="fas fa-paper-plane"></i></button>
         </div>
       </div>
     </div>
@@ -94,17 +93,26 @@ body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--tex
   </main>
 </div>
 
-<script type="module">
-const CONFIG={GEOAPIFY_KEY:"5b4260b421284bbd8f5e10b656279436",DOBBY_KEY:"fw_3ZVw4csVhBzeyBqkw6NAt1jd",MAX_PLACES:6};
+<script>
+const CONFIG={GEOAPIFY_KEY:"5b4260b421284bbd8f5e10b656279436",MAX_PLACES:6};
 const state={userCoords:null};
-const el={chat:document.getElementById('chatMessages'),input:document.getElementById('messageInput')};
+const el={
+  chat:document.getElementById('chatMessages'),
+  input:document.getElementById('messageInput'),
+  sendBtn:document.getElementById('sendButton')
+};
 
-document.addEventListener('DOMContentLoaded',()=>{tryGetLocation();});
+document.addEventListener('DOMContentLoaded',()=>{
+  el.sendBtn.addEventListener('click',sendMessage);
+  el.input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
+  tryGetLocation();
+});
 
 function tryGetLocation(){
   if(!navigator.geolocation)return;
   navigator.geolocation.getCurrentPosition(p=>{
     state.userCoords={lat:p.coords.latitude,lon:p.coords.longitude};
+    console.log('User location:',state.userCoords);
   });
 }
 
