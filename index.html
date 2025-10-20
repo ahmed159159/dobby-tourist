@@ -156,11 +156,14 @@ with fields:
 - message: a short human English sentence describing the interpretation (for user display)
 - fallback: optional suggested fallback category (e.g., "tourism.attraction")
 */
-const DOBBY_SYSTEM_PROMPT = `
+async function askDobbyForIntent(userMessage) {
+  try {
+    const prompt = `
 You are Dobby, a professional travel assistant.
 Your task: classify the user's message into a JSON with this exact structure:
 {"intent":"find_places","category":"<geoapify_category>","location":"<city_or_null>"}
 
+Rules:
 - "intent" must be either "find_places" or "general".
 - If the user asks about food, cafes, restaurants, or bars → category = "catering.restaurant" or "catering.cafe".
 - If the user asks about museums, landmarks, or attractions → category = "tourism.museum" or "tourism.attraction".
@@ -174,7 +177,6 @@ Your task: classify the user's message into a JSON with this exact structure:
 
 User message: "${userMessage}"
 `;
-
 
 /* ================== CORE FLOW ================== */
 sendBtn.addEventListener('click', onSend);
