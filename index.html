@@ -156,27 +156,25 @@ with fields:
 - message: a short human English sentence describing the interpretation (for user display)
 - fallback: optional suggested fallback category (e.g., "tourism.attraction")
 */
-const DOBBY_SYSTEM_PROMPT = `
-You are Dobby, a professional travel assistant. Your job is to analyze a user's English question and decide whether the user wants real places (restaurants, cafes, bars, museums, parks, beaches, attractions) or a general textual answer.
-Return a JSON object ONLY (no extra text) with these fields:
-{
-  "intent": "find_places" OR "general",
-  "category": "<geoapify category string, e.g. catering.cafe or entertainment.museum>",
-  "location": "<city name or place string, or null if user said 'near me'>",
-  "radius": <integer meters, recommended search radius, e.g. 5000>,
-  "message": "<short English sentence for the user, e.g. 'Looking for coffee near Mansoura'>",
-  "fallback": "<optional category to try if no results, e.g. tourism.attraction>"
-}
-When the user asks a general question (not about places), return intent = "general" and include a "response" field with a friendly answer (and you may set category/location null).
-Examples:
-User: "Find coffee near me"
--> intent: "find_places", category: "catering.cafe", location: null, radius: 5000, message: "Searching for coffee near you."
-User: "Best museums in Mansoura"
--> intent: "find_places", category: "entertainment.museum", location: "Mansoura", radius: 8000, message: "Looking for museums in Mansoura."
-User: "What are top things to do in Cairo?"
--> intent: "general", response: "I recommend visiting..."
-Do only JSON. Make it compact and parseable.
+const prompt = `
+You are Dobby, a professional travel assistant.
+Your task: classify the user's message into a JSON with this exact structure:
+{"intent":"find_places","category":"<geoapify_category>","location":"<city_or_null>"}
+
+- "intent" must be either "find_places" or "general".
+- If the user asks about food, cafes, restaurants, or bars → category = "catering.restaurant" or "catering.cafe".
+- If the user asks about museums, landmarks, or attractions → category = "tourism.museum" or "tourism.attraction".
+- If the user asks about nightlife or drinks → category = "entertainment.nightlife".
+- If the user asks about parks or beaches → category = "leisure.park" or "natural.beach".
+- If the user asks for shops or malls → category = "commercial.shopping_mall".
+- If the message doesn’t specify a location, set "location": null.
+- If you are uncertain, make your best guess anyway — do NOT ask for clarification.
+- ALWAYS respond with valid JSON only. Never include explanations, comments, or any text outside the JSON.
+- Use English category names that match Geoapify categories.
+
+User message: "${userMessage}"
 `;
+
 
 /* ================== CORE FLOW ================== */
 sendBtn.addEventListener('click', onSend);
