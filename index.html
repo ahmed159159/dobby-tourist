@@ -89,7 +89,7 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helveti
 
 <script>
 /* ================== CONFIG ================== */
-/* Keys inlined as you requested */
+/* Keys inlined as requested */
 const GEOAPIFY_KEY = "5b4260b421284bbd8f5e10b656279436";
 const DOBBY_KEY   = "fw_3ZVw4csVhBzeyBqkw6NAt1jd";
 const MAX_PLACES  = 6;
@@ -152,11 +152,88 @@ with fields:
 - intent: "find_places" or "general"
 - category: a single Geoapify category string (like "catering.cafe" or "entertainment.museum")
 - location: string or null (city or place). If user said "near me", return null for location.
-- radius: integer in meters (suggested search radius)
+- radius: integer in meters (recommended search radius)
 - message: a short human English sentence describing the interpretation (for user display)
 - fallback: optional suggested fallback category (e.g., "tourism.attraction")
 */
-async function askDobbyForIntent(userMessage) {
+const DOBBY_SYSTEM_PROMPT = `
+You are Dobby, a professional travel assistant. Your job is to analyze a user's English question and decide whether the user wants real places (restaurants, cafes, bars, museums, parks, beaches, attractions) or a general textual answer.
+Return a JSON object ONLY (no extra text) with these fields:
+{
+  "intent": "find_places" OR "general",
+  "category": "<geoapify category string, e.g. catering.cafe or entertainment.museum>",
+  "location": "<city name or place string, or null if user said 'near me'>",
+  "radius": <integer meters, recommended search radius, e.g. 5000>,
+  "message": "<short English sentence for the user, e.g. 'Looking for coffee near Mansoura'>",
+  "fallback": "<optional category to try if no results, e.g. tourism.attraction>"
+}
+When the user asks a general question (not about places), return intent = "general" and include a "response" field with a friendly answer (and you may set category/location null).
+Examples:
+User: "Find coffee near me"
+-> intent: "find_places", category: "catering.cafe", location: null, radius: 5000, message: "Searching for coffee near you."
+User: "Best museums in Mansoura"
+-> intent: "find_places", category: "entertainment.museum", location: "Mansoura", radius: 8000, message: "Looking for museums in Mansoura."
+User: "What are top things to do in Cairo?"
+-> intent: "general", response: "I recommend visiting..."
+Do only JSON. Make it compact and parseable.
+`;
+
+/* ================== CORE FLOW ================== */
+sendBtn.addEventListener('click', onSend);
+inputEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); } });
+
+function useQuick(text){ inputEl.value = text; onSend(); }
+
+async function onSend(){
+  const text = inputEl.value.trim();
+  if(!text) return;
+  inputEl.value = '';
+  addUserMessage(text);
+  stats.queries++; updateStats();
+
+  // Step 1: ask Dobby to analyze
+  addAssistantTiny("Dobby is analyzing your request...");
+  let dobbyJson = null;
+  try {
+    const dobbyRaw = await askDobbyForIntent(text);
+    // try to parse
+    if(typeof dobbyRaw === 'string'){
+      try { dobbyJson = JSON.parse(dobbyRaw); } catch(e){ dobbyJson = null; }
+    } else {
+      dobbyJson = dobbyRaw;
+    }
+  } catch(e) {
+    console.error("askDobbyForIntent threw:", e);
+    dobbyJson = null;
+  }
+
+  // fallback heuristic if dobby didn't return valid JSON
+  if(!dobbyJson){
+    addAssistantTiny("Dobby fallback: used simple heuristics to interpret your request.");
+    dobbyJson = heuristicAnalyze(text);
+  }
+
+  // display Dobby's message if present
+  if(dobbyJson.message) addAssistantMessage(dobbyJson.message);
+
+  // If general intent: show Dobby textual answer
+  if(dobbyJson.intent === 'general'){
+    if(dobbyJson.response){
+      addAssistantMessage(dobbyJson.response);
+    } else {
+      const resp = await askDobbyForTextAnswer(text);
+      addAssistantMessage(resp);
+    }
+    return;
+  }
+
+  // Otherwise intent = find_places -> call Geoapify
+  await performGeoapifyQuery(text, dobbyJson);
+}
+
+/* ================== ASK DOBBY (analysis) ================== */
+/* This is the improved askDobbyForIntent function with the stronger prompt */
+async function askDobbyForIntent(userMessage){
   try {
     const prompt = `
 You are Dobby, a professional travel assistant.
@@ -178,106 +255,34 @@ Rules:
 User message: "${userMessage}"
 `;
 
-/* ================== CORE FLOW ================== */
-sendBtn.addEventListener('click', onSend);
-inputEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); } });
+    const payload = {
+      model: "accounts/sentientfoundation-serverless/models/dobby-mini-unhinged-plus-llama-3-1-8b",
+      prompt,
+      max_tokens: 200,
+      temperature: 0.2,
+      top_p: 0.9,
+    };
 
-function useQuick(text){ inputEl.value = text; onSend(); }
-
-async function onSend(){
-  const text = inputEl.value.trim();
-  if(!text) return;
-  inputEl.value = '';
-  addUserMessage(text);
-  stats.queries++; updateStats();
-
-  // Step 1: ask Dobby to analyze
-  addAssistantTiny("Dobby is analyzing your request...");
-  let dobbyJson = null;
-  try {
-    const dobbyRaw = await askDobbyForIntent(text);
-    // attempt to parse response (strip possible leading/trailing)
-    try {
-      dobbyJson = typeof dobbyRaw === 'string' ? JSON.parse(dobbyRaw) : dobbyRaw;
-    } catch(parseErr){
-      // try to extract JSON substring
-      const m = String(dobbyRaw).match(/\{[\s\S]*\}/);
-      if(m) {
-        try { dobbyJson = JSON.parse(m[0]); }
-        catch(e){ dobbyJson = null; }
-      }
+    const res = await fetch("https://api.fireworks.ai/inference/v1/completions", {
+      method:'POST',
+      headers:{ "Content-Type":"application/json","Accept":"application/json","Authorization":`Bearer ${DOBBY_KEY}` },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error("Dobby API error: " + res.status);
+    const j = await res.json();
+    let raw = "";
+    if(j.choices && j.choices[0]){
+      if(j.choices[0].text) raw = j.choices[0].text.trim();
+      else if(j.choices[0].message && j.choices[0].message.content) raw = j.choices[0].message.content.trim();
     }
-  } catch(e) {
-    addAssistantMessage("Error analyzing your request. I'll try a simple heuristic.", false);
-    dobbyJson = null;
+    console.log("Dobby raw response:", raw);
+    // try parse JSON
+    try { return JSON.parse(raw); }
+    catch(e){ throw new Error("Dobby returned non-JSON"); }
+  } catch(err){
+    console.warn("askDobbyForIntent error:", err);
+    throw err;
   }
-
-  // If parsing failed, fall back to simple heuristic
-  if(!dobbyJson){
-    dobbyJson = heuristicAnalyze(text);
-    addAssistantTiny("Dobby fallback: used simple heuristics to interpret your request.");
-  }
-
-  // Show Dobby's interpretive message
-  if(dobbyJson.message) addAssistantMessage(dobbyJson.message);
-
-  // If general intent: show Dobby textual answer
-  if(dobbyJson.intent === 'general'){
-    if(dobbyJson.response){
-      addAssistantMessage(dobbyJson.response);
-    } else {
-      // if no response field, ask Dobby for textual reply
-      const resp = await askDobbyForTextAnswer(text);
-      addAssistantMessage(resp);
-    }
-    return;
-  }
-
-  // Otherwise intent = find_places -> call Geoapify
-  await performGeoapifyQuery(text, dobbyJson);
-}
-
-/* ================== ASK DOBBY (analysis) ================== */
-async function askDobbyForIntent(userText){
-  const payload = {
-    model: "accounts/sentientfoundation-serverless/models/dobby-mini-unhinged-plus-llama-3-1-8b",
-    prompt: `${DOBBY_SYSTEM_PROMPT}\nUser: "${userText}"\nReturn JSON:`,
-    max_tokens: 220,
-    temperature: 0.0
-  };
-
-  const res = await fetch("https://api.fireworks.ai/inference/v1/completions", {
-    method:'POST',
-    headers:{ "Content-Type":"application/json", "Accept":"application/json", "Authorization": `Bearer ${DOBBY_KEY}` },
-    body: JSON.stringify(payload)
-  });
-  if(!res.ok) throw new Error("Dobby API error: " + res.status);
-  const j = await res.json();
-  // try common response shapes
-  if(j.choices && j.choices[0]){
-    if(j.choices[0].text) return j.choices[0].text.trim();
-    if(j.choices[0].message && j.choices[0].message.content) return j.choices[0].message.content.trim();
-  }
-  // fallback
-  return JSON.stringify({ intent: "general", response: "Sorry, I couldn't analyze." });
-}
-
-async function askDobbyForTextAnswer(userText){
-  const payload = {
-    model: "accounts/sentientfoundation-serverless/models/dobby-mini-unhinged-plus-llama-3-1-8b",
-    prompt: `You are Dobby, a helpful travel assistant. Answer briefly in English:\nUser: "${userText}"\nAnswer:`,
-    max_tokens: 220,
-    temperature: 0.7
-  };
-  const res = await fetch("https://api.fireworks.ai/inference/v1/completions", {
-    method:'POST', headers:{ "Content-Type":"application/json","Accept":"application/json","Authorization":`Bearer ${DOBBY_KEY}` }, body: JSON.stringify(payload)
-  });
-  if(!res.ok) return "Dobby responded with an error.";
-  const j = await res.json();
-  if(j.choices && j.choices[0]){
-    return (j.choices[0].text || j.choices[0].message?.content || "").trim();
-  }
-  return "Dobby couldn't generate an answer.";
 }
 
 /* ================== HEURISTIC (fallback) ================== */
@@ -294,7 +299,6 @@ function heuristicAnalyze(text){
   ];
   for(const m of mapping){
     if(m.regex.test(t)){
-      // detect explicit city: "in Cairo" or trailing comma "pizza, Mansoura"
       const cityMatch = t.match(/\b(?:in|at)\s+([A-Za-z\u00C0-\u017F\s\-]+)/i);
       const commaParts = text.split(',');
       let loc = null;
@@ -304,33 +308,23 @@ function heuristicAnalyze(text){
       return { intent:"find_places", category:m.cat, location:loc, radius:5000, message: `${m.msg}${loc?(' in '+loc):' near you'}`, fallback:"tourism.attraction" };
     }
   }
-  // default: general
   return { intent:"general", response:"Can you clarify what you mean? Are you looking for places (restaurants, cafes, museums) or general advice?" };
 }
 
 /* ================== GEOAPIFY QUERY & FALLBACK ================== */
 async function performGeoapifyQuery(originalText, dobbyJson){
-  // Show Dobby's message already displayed earlier
   addAssistantTiny("Querying Geoapify for live places...");
-
-  // Build URL
   const category = dobbyJson.category || "catering.restaurant";
-  const radius = dobbyJson.radius && Number(dobbyJson.radius) > 0 ? Number(dobbyJson.radius) : 5000;
+  const radius = dobbyJson.radius && Number(dobbyJson.radius)>0 ? Number(dobbyJson.radius) : 5000;
   const limit = MAX_PLACES;
-
   let url = '';
-  // if dobby provided a location string, use geocode search to target city + category
   if(dobbyJson.location){
-    // We'll search by text "<category word> in <city>"
     const searchText = (originalText || category + ' in ' + dobbyJson.location);
-    // use Geocoding search to find relevant POIs by text (returns features)
     url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchText)}&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
   } else {
-    // Use places endpoint with category and circle filter if we have coords
     if(userCoords){
       url = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(category)}&filter=circle:${userCoords.lon},${userCoords.lat},${radius}&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
     } else {
-      // No coords and no explicit location -> use text search with category keyword
       const fallbackText = originalText || category;
       url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(fallbackText)}&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
     }
@@ -341,20 +335,15 @@ async function performGeoapifyQuery(originalText, dobbyJson){
     if(!resp.ok) throw new Error('Geoapify error: ' + resp.status);
     const data = await resp.json();
     const features = data.features || [];
-
-    // If zero results and a fallback category is suggested, try fallback
     if((!features || features.length === 0) && dobbyJson.fallback){
       addAssistantTiny(`No results for ${category}. Trying fallback category ${dobbyJson.fallback}...`);
-      // try fallback around user coords if available
       if(userCoords){
         const url2 = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(dobbyJson.fallback)}&filter=circle:${userCoords.lon},${userCoords.lat},${radius}&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
-        const r2 = await fetch(url2);
-        const d2 = await r2.json();
+        const r2 = await fetch(url2); const d2 = await r2.json();
         if(d2.features && d2.features.length) {
           return renderPlaces(d2.features, dobbyJson, `${dobbyJson.fallback} (fallback)`);
         }
       } else {
-        // fallback geocode search without coords
         const fbText = (originalText ? originalText + ' ' + dobbyJson.fallback : dobbyJson.fallback);
         const url2 = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(fbText)}&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
         const r2 = await fetch(url2); const d2 = await r2.json();
@@ -362,12 +351,10 @@ async function performGeoapifyQuery(originalText, dobbyJson){
           return renderPlaces(d2.features, dobbyJson, `${dobbyJson.fallback} (fallback)`);
         }
       }
-      // still no results
       addAssistantMessage("I couldn't find nearby places matching that category. You may try a broader query (e.g., 'attractions').");
       return;
     }
 
-    // If we got features, render them
     if(features && features.length){
       return renderPlaces(features, dobbyJson, category);
     } else {
@@ -402,7 +389,6 @@ function renderPlaces(features, dobbyJson, usedCategory){
         <div class="small-muted">${escapeHtml(addr)}${escapeHtml(distanceStr)}</div>
         <div class="place-actions">
           <a class="link" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + addr)}">View on map</a>
-          ${lat && lon ? `<a class="link" target="_blank" href="https://maps.geoapify.com/v1/tile/carto/15/${Math.floor((lon+180)/360*Math.pow(2,15))}/0.png?apiKey=${GEOAPIFY_KEY}">Tile</a>` : ''}
         </div>
       </div>
     `;
@@ -411,10 +397,9 @@ function renderPlaces(features, dobbyJson, usedCategory){
   });
   stats.places += found; updateStats();
 
-  // Ask Dobby to recommend top 3 from this list (short)
   askDobbyForRecommendations(features.slice(0, MAX_PLACES)).then(rec=>{
     if(rec) addAssistantMessage(`<div style="margin-top:8px"><strong>Top recommendations:</strong><div class="small-muted">${escapeHtml(rec)}</div></div>`, true);
-  }).catch(()=>{ /* ignore */ });
+  }).catch(()=>{});
 
   return;
 }
